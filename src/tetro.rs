@@ -126,6 +126,8 @@ impl Grid {
 
         // Use checked_add to prevent overflow
         self.update_final_high();
-        self.show_board();
+
+        // uncomment to print the board for debugging
+        // self.show_board();
     }
 }
