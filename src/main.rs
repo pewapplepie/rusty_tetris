@@ -18,26 +18,33 @@ fn get_tetrominoes() -> HashMap<&'static str, Tetromino> {
 }
 
 fn process(line: &str, tetris_map: &HashMap<&str, Tetromino>) -> String {
-    // println!("New game: {}", line);
+    // Create a new board
     let mut playground = Grid::new();
 
-    for element in line.split(',').enumerate() {
-        let (piece, pos_str) = element.1.split_at(1);
-        if let Ok(position) = pos_str.parse::<i32>() {
-            match tetris_map.get(piece) {
-                Some(shape) => {
-                    // println!("{position} at {:?} ", shape);
-                    playground.place_piece(position, shape);
-                    // println!("=====");
-                }
-                None => eprintln!("Invalid tetromino: {}", piece),
-            }
-        } else {
-            eprintln!("Invalid position: {}", pos_str);
-            return "Invalid input".to_string();
+    // Use iterator chaining
+    let result: Result<(), String> = line
+        .split(',')
+        .map(|element| element.split_at(1))
+        .try_for_each(|(piece, pos_str)| {
+            let position = pos_str
+                .parse::<i32>()
+                .map_err(|_| format!("Invalid position: {}", pos_str))?;
+
+            let shape = tetris_map
+                .get(piece)
+                .ok_or_else(|| format!("Invalid tetromino: {}", piece))?;
+
+            playground.place_piece(position, shape);
+            Ok(())
+        });
+
+    match result {
+        Ok(_) => playground.final_high.to_string(),
+        Err(e) => {
+            eprintln!("{}", e);
+            "Invalid input".to_string()
         }
     }
-    playground.final_high.to_string()
 }
 
 fn main() {
@@ -49,6 +56,7 @@ fn main() {
         match line {
             Ok(content) => {
                 let output = process(&content, &tetrominoes);
+                // println!("==========");
                 println!("Final height: {:?}", output);
             }
             Err(e) => eprintln!("Error reading line: {}", e),

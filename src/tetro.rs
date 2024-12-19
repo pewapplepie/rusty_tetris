@@ -6,8 +6,8 @@ pub struct Grid {
     height: usize,
     pub final_high: usize,
     board: [bool; HEIGHT * WIDTH],
-    col_high: [i32; WIDTH],
-    row_count: [usize; HEIGHT],
+    col_high: Vec<i32>,
+    row_count: Vec<usize>,
 }
 
 impl Grid {
@@ -17,25 +17,18 @@ impl Grid {
             height: HEIGHT,
             final_high: 0,
             board: [false; HEIGHT * WIDTH],
-            col_high: [HEIGHT as i32; WIDTH],
-            row_count: [0; HEIGHT],
+            col_high: vec![HEIGHT as i32; WIDTH],
+            row_count: vec![0; HEIGHT],
         }
     }
 
     pub fn show_board(&self) {
-        for r in 0..self.height {
-            let row: Vec<String> = (0..self.width)
-                .map(|c| {
-                    if self.board[self.get_index(r, c)] {
-                        "#".to_string() // Filled cell
-                    } else {
-                        ".".to_string() // Empty cell
-                    }
-                })
-                .collect();
+        self.board.chunks(self.width).for_each(|row| {
+            row.iter()
+                .for_each(|&cell| print!("{} ", if cell { '#' } else { '.' }));
+            println!(); // New line after each row
+        });
 
-            println!("{}", row.join(" "));
-        }
         println!("---------------------");
     }
 
@@ -55,7 +48,6 @@ impl Grid {
             if !self.inbound(row, col) {
                 return false;
             }
-            // println!("inbound at ({}, {})", row, col);
             if self.board[self.get_index(row as usize, col as usize)] {
                 return false;
             }
@@ -100,20 +92,22 @@ impl Grid {
             self.board[self.get_index(0, col)] = false;
         }
         self.row_count[0] = 0;
-
-        // println!("Moved rows down from row {}", cleared_row);
     }
+
     // Place a piece
     pub fn place_piece(&mut self, position: i32, shape: &Vec<(i32, i32)>) {
         let mut st_row = shape
             .iter()
-            .map(|&(_, c)| self.col_high[(position + c) as usize])
+            .map(|&(_, c)| {
+                self.col_high
+                    .get((position + c) as usize)
+                    .copied()
+                    .unwrap_or(self.height as i32)
+            })
             .min()
-            .unwrap_or((self.height - 1) as i32);
+            .unwrap_or(self.height as i32);
 
-        // println!("good start {}", st_row);
         while !self.valid_block(st_row, position, shape) {
-            // println!("move {}", st_row);
             st_row -= 1;
         }
 
@@ -121,7 +115,6 @@ impl Grid {
             let row = st_row + dr;
             let col = position + dc;
             // we know that the position is garanted to be valid
-            // println!("Place at row {} and column {}", row, col);
             self.board[self.get_index(row as usize, col as usize)] = true;
             self.col_high[col as usize] = std::cmp::min(row, self.col_high[col as usize]);
             self.row_count[row as usize] += 1;
@@ -133,6 +126,6 @@ impl Grid {
 
         // Use checked_add to prevent overflow
         self.update_final_high();
-        // self.show_board();
+        self.show_board();
     }
 }
